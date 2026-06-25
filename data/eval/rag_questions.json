@@ -1,0 +1,122 @@
+[
+  {
+    "id": "q001",
+    "question": "Redis 在这个项目里负责哪些能力？",
+    "expected_keywords": ["Redis", "session", "向量"],
+    "notes": "覆盖 Redis 多用途定位。"
+  },
+  {
+    "id": "q002",
+    "question": "项目为什么使用 FastAPI？",
+    "expected_keywords": ["FastAPI", "API", "后端"],
+    "notes": "覆盖后端框架选型。"
+  },
+  {
+    "id": "q003",
+    "question": "RAG 的文档入库流程是什么？",
+    "expected_keywords": ["解析", "切片", "embedding", "Redis"],
+    "notes": "覆盖 RAG ingestion pipeline。"
+  },
+  {
+    "id": "q004",
+    "question": "为什么文档要先切成 chunk？",
+    "expected_keywords": ["chunk", "切片", "上下文"],
+    "notes": "覆盖 chunking 原因。"
+  },
+  {
+    "id": "q005",
+    "question": "chunk_overlap 的作用是什么？",
+    "expected_keywords": ["overlap", "边界", "上下文"],
+    "notes": "覆盖切片 overlap。"
+  },
+  {
+    "id": "q006",
+    "question": "当前 fake embedding 的作用和限制是什么？",
+    "expected_keywords": ["fake", "embedding", "API Key"],
+    "notes": "覆盖测试 embedding 的边界。"
+  },
+  {
+    "id": "q007",
+    "question": "Redis vector search 返回的 distance 怎么理解？",
+    "expected_keywords": ["distance", "越小", "相近"],
+    "notes": "覆盖距离指标。"
+  },
+  {
+    "id": "q008",
+    "question": "RAG 回答为什么要返回 sources？",
+    "expected_keywords": ["sources", "引用", "调试"],
+    "notes": "覆盖可解释性。"
+  },
+  {
+    "id": "q009",
+    "question": "没有检索到上下文时为什么不应该调用 LLM？",
+    "expected_keywords": ["上下文", "LLM", "拒答"],
+    "notes": "覆盖拒答策略。"
+  },
+  {
+    "id": "q010",
+    "question": "Agent workflow 里 steps 的作用是什么？",
+    "expected_keywords": ["steps", "调试", "可观察"],
+    "notes": "覆盖 Agent 可观察性。"
+  },
+  {
+    "id": "q011",
+    "question": "search_docs 工具和 RAG 检索有什么关系？",
+    "expected_keywords": ["search_docs", "工具", "检索"],
+    "notes": "覆盖工具和 RAG 复用。"
+  },
+  {
+    "id": "q012",
+    "question": "calculator 工具为什么不能直接用 eval？",
+    "expected_keywords": ["eval", "安全", "AST"],
+    "notes": "覆盖工具安全。"
+  },
+  {
+    "id": "q013",
+    "question": "summarize_file 为什么要限制读取路径？",
+    "expected_keywords": ["路径", "安全", "读取"],
+    "notes": "覆盖文件工具安全边界。"
+  },
+  {
+    "id": "q014",
+    "question": "短期记忆和长期记忆分别存在哪里？",
+    "expected_keywords": ["session", "memory:profile", "Redis"],
+    "notes": "覆盖记忆 key 设计。"
+  },
+  {
+    "id": "q015",
+    "question": "为什么短期 session 要设置 TTL？",
+    "expected_keywords": ["TTL", "过期", "堆积"],
+    "notes": "覆盖 Redis 生命周期。"
+  },
+  {
+    "id": "q016",
+    "question": "显式记忆为什么可以走 memory_update？",
+    "expected_keywords": ["memory_update", "确定性", "LLM"],
+    "notes": "覆盖显式记忆路径。"
+  },
+  {
+    "id": "q017",
+    "question": "同步上传和异步索引的区别是什么？",
+    "expected_keywords": ["异步", "task_id", "pending"],
+    "notes": "覆盖后台任务。"
+  },
+  {
+    "id": "q018",
+    "question": "文档索引任务状态为什么放 Redis？",
+    "expected_keywords": ["Redis", "任务状态", "重启"],
+    "notes": "覆盖任务状态共享。"
+  },
+  {
+    "id": "q019",
+    "question": "React 前端为什么需要 CORS 配置？",
+    "expected_keywords": ["CORS", "5173", "8025"],
+    "notes": "覆盖前后端联调。"
+  },
+  {
+    "id": "q020",
+    "question": "这个项目目前没有 LLM_API_KEY 时还能演示哪些能力？",
+    "expected_keywords": ["计算", "待办", "记忆"],
+    "notes": "覆盖无 Key 演示路径。"
+  }
+]

@@ -1,0 +1,190 @@
+services:
+  redis:
+    image: redis:8
+    container_name: ai-resume-job-agent-redis
+    profiles: ["infra"]
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mysql:
+    image: mysql:8.4
+    container_name: ai-resume-job-agent-mysql
+    profiles: ["infra"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-personal_agent_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-personal_agent}
+    ports:
+      - "3306:3306"
+    command:
+      [
+        "mysqld",
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_0900_ai_ci",
+      ]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: ai-resume-job-agent-api
+    profiles: ["app"]
+    environment:
+      APP_ENV: docker
+      API_PREFIX: /api/v1
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_SOCKET_TIMEOUT_SECONDS: ${REDIS_SOCKET_TIMEOUT_SECONDS:-2}
+      DOCUMENT_INDEX_QUEUE_NAME: ${DOCUMENT_INDEX_QUEUE_NAME:-document-index}
+      DOCUMENT_INDEX_JOB_TIMEOUT_SECONDS: ${DOCUMENT_INDEX_JOB_TIMEOUT_SECONDS:-300}
+      DOCUMENT_INDEX_RESULT_TTL_SECONDS: ${DOCUMENT_INDEX_RESULT_TTL_SECONDS:-3600}
+      DOCUMENT_INDEX_FAILURE_TTL_SECONDS: ${DOCUMENT_INDEX_FAILURE_TTL_SECONDS:-86400}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fake}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-30}
+      EMBEDDING_MAX_RETRIES: ${EMBEDDING_MAX_RETRIES:-1}
+      REDIS_VECTOR_INDEX_NAME: ${REDIS_VECTOR_INDEX_NAME:-idx:docs}
+      REDIS_VECTOR_KEY_PREFIX: ${REDIS_VECTOR_KEY_PREFIX:-doc:}
+      REDIS_VECTOR_STORAGE_TYPE: ${REDIS_VECTOR_STORAGE_TYPE:-HASH}
+      REDIS_VECTOR_FIELD_NAME: ${REDIS_VECTOR_FIELD_NAME:-embedding}
+      REDIS_VECTOR_CONTENT_FIELD_NAME: ${REDIS_VECTOR_CONTENT_FIELD_NAME:-content}
+      REDIS_VECTOR_METADATA_FIELD_NAME: ${REDIS_VECTOR_METADATA_FIELD_NAME:-metadata}
+      REDIS_VECTOR_DIMENSION: ${REDIS_VECTOR_DIMENSION:-1536}
+      REDIS_VECTOR_DATA_TYPE: ${REDIS_VECTOR_DATA_TYPE:-FLOAT32}
+      REDIS_VECTOR_ALGORITHM: ${REDIS_VECTOR_ALGORITHM:-HNSW}
+      REDIS_VECTOR_DISTANCE_METRIC: ${REDIS_VECTOR_DISTANCE_METRIC:-COSINE}
+      MYSQL_URL: ${MYSQL_URL:-mysql+pymysql://agent_reader:agent_reader_password@mysql:3306/personal_agent}
+      MYSQL_CONNECT_TIMEOUT_SECONDS: ${MYSQL_CONNECT_TIMEOUT_SECONDS:-3}
+      MYSQL_QUERY_TIMEOUT_SECONDS: ${MYSQL_QUERY_TIMEOUT_SECONDS:-5}
+      MYSQL_ALLOWED_TABLES: '["job_applications","application_events"]'
+      MYSQL_DEFAULT_LIMIT: ${MYSQL_DEFAULT_LIMIT:-50}
+      MYSQL_MAX_LIMIT: ${MYSQL_MAX_LIMIT:-100}
+      LLM_PROVIDER: ${LLM_PROVIDER:-deepseek}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-1}
+      CORS_ALLOW_ORIGINS: '["http://127.0.0.1:5173","http://localhost:5173"]'
+    ports:
+      - "8025:8025"
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json, urllib.request; body=json.load(urllib.request.urlopen('http://127.0.0.1:8025/api/v1/health/redis', timeout=3)); raise SystemExit(0 if body.get('redis') == 'connected' else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: ai-resume-job-agent-worker
+    profiles: ["app"]
+    command: ["python", "-m", "app.workers.rq_worker"]
+    environment:
+      APP_ENV: docker
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_SOCKET_TIMEOUT_SECONDS: ${REDIS_SOCKET_TIMEOUT_SECONDS:-2}
+      DOCUMENT_INDEX_QUEUE_NAME: ${DOCUMENT_INDEX_QUEUE_NAME:-document-index}
+      DOCUMENT_INDEX_JOB_TIMEOUT_SECONDS: ${DOCUMENT_INDEX_JOB_TIMEOUT_SECONDS:-300}
+      DOCUMENT_INDEX_RESULT_TTL_SECONDS: ${DOCUMENT_INDEX_RESULT_TTL_SECONDS:-3600}
+      DOCUMENT_INDEX_FAILURE_TTL_SECONDS: ${DOCUMENT_INDEX_FAILURE_TTL_SECONDS:-86400}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fake}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-30}
+      EMBEDDING_MAX_RETRIES: ${EMBEDDING_MAX_RETRIES:-1}
+      REDIS_VECTOR_INDEX_NAME: ${REDIS_VECTOR_INDEX_NAME:-idx:docs}
+      REDIS_VECTOR_KEY_PREFIX: ${REDIS_VECTOR_KEY_PREFIX:-doc:}
+      REDIS_VECTOR_STORAGE_TYPE: ${REDIS_VECTOR_STORAGE_TYPE:-HASH}
+      REDIS_VECTOR_FIELD_NAME: ${REDIS_VECTOR_FIELD_NAME:-embedding}
+      REDIS_VECTOR_CONTENT_FIELD_NAME: ${REDIS_VECTOR_CONTENT_FIELD_NAME:-content}
+      REDIS_VECTOR_METADATA_FIELD_NAME: ${REDIS_VECTOR_METADATA_FIELD_NAME:-metadata}
+      REDIS_VECTOR_DIMENSION: ${REDIS_VECTOR_DIMENSION:-1536}
+      REDIS_VECTOR_DATA_TYPE: ${REDIS_VECTOR_DATA_TYPE:-FLOAT32}
+      REDIS_VECTOR_ALGORITHM: ${REDIS_VECTOR_ALGORITHM:-HNSW}
+      REDIS_VECTOR_DISTANCE_METRIC: ${REDIS_VECTOR_DISTANCE_METRIC:-COSINE}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "from redis import Redis; import os; raise SystemExit(0 if Redis.from_url(os.environ['REDIS_URL']).ping() else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai-resume-job-agent-frontend
+    profiles: ["app"]
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://127.0.0.1:8025/api/v1}
+      VITE_API_PROXY_TARGET: http://api:8025
+      VITE_DEV_HOST: 0.0.0.0
+      VITE_DEV_PORT: 5173
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5173').then((r)=>process.exit(r.ok ? 0 : 1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  redis_data:
+  mysql_data:

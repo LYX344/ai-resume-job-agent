@@ -1,0 +1,92 @@
+[
+  {
+    "id": "r001",
+    "question": "这位候选人的求职意向是什么？",
+    "expected_keywords": ["AI 应用开发", "实习"],
+    "notes": "求职意向"
+  },
+  {
+    "id": "r002",
+    "question": "候选人什么时候可以到岗实习？",
+    "expected_keywords": ["2026", "暑期"],
+    "notes": "到岗时间"
+  },
+  {
+    "id": "r003",
+    "question": "候选人的教育背景是什么？读哪个学校什么专业？",
+    "expected_keywords": ["示例大学", "计算机科学与技术"],
+    "notes": "教育背景"
+  },
+  {
+    "id": "r004",
+    "question": "候选人预计什么时候毕业？",
+    "expected_keywords": ["2027", "毕业"],
+    "notes": "毕业时间"
+  },
+  {
+    "id": "r005",
+    "question": "候选人了解哪些 Agent 和 RAG 相关技术？",
+    "expected_keywords": ["RAG", "Embedding", "向量检索"],
+    "notes": "AI/Agent 技能"
+  },
+  {
+    "id": "r006",
+    "question": "候选人掌握哪些前端开发技术？",
+    "expected_keywords": ["HTML", "CSS", "JavaScript"],
+    "notes": "前端技能"
+  },
+  {
+    "id": "r007",
+    "question": "候选人在 Python 自动化方面会哪些技术？",
+    "expected_keywords": ["Python", "SQLite"],
+    "notes": "Python 技能"
+  },
+  {
+    "id": "r008",
+    "question": "候选人使用什么工具做版本管理？",
+    "expected_keywords": ["Git", "GitHub"],
+    "notes": "工程工具"
+  },
+  {
+    "id": "r009",
+    "question": "浏览器翻译插件是一个什么项目？",
+    "expected_keywords": ["浏览器", "翻译"],
+    "notes": "项目1简介"
+  },
+  {
+    "id": "r010",
+    "question": "浏览器翻译插件用到了哪些技术？",
+    "expected_keywords": ["JavaScript", "OpenAI"],
+    "notes": "项目1技术"
+  },
+  {
+    "id": "r011",
+    "question": "社区自动化 Bot 用什么语言和库实现？",
+    "expected_keywords": ["Python", "discord.py"],
+    "notes": "项目2技术"
+  },
+  {
+    "id": "r012",
+    "question": "社区 Bot 项目用什么做数据持久化？",
+    "expected_keywords": ["SQLite"],
+    "notes": "项目2持久化"
+  },
+  {
+    "id": "r013",
+    "question": "JSON 可视化编辑器用什么技术实现？",
+    "expected_keywords": ["JSON", "JavaScript"],
+    "notes": "补充项目1"
+  },
+  {
+    "id": "r014",
+    "question": "STM32 智能家居控制系统用到哪些硬件模块？",
+    "expected_keywords": ["STM32", "OLED"],
+    "notes": "补充项目2"
+  },
+  {
+    "id": "r015",
+    "question": "候选人的联系邮箱是什么？",
+    "expected_keywords": ["邮箱"],
+    "notes": "联系方式"
+  }
+]

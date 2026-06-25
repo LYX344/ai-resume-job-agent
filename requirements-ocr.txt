@@ -1,0 +1,17 @@
+# Optional OCR dependencies for scanned / image PDF pages.
+#
+# Install with:
+#   pip install -r requirements-ocr.txt
+#
+# These power PDF_OCR_PROVIDER=paddleocr (local, offline, domestic-friendly),
+# which handles mixed Chinese/English and best-effort seal (公章) text.
+#
+# NOTE: paddlepaddle wheels often lag behind the newest CPython. If install
+# fails on Python 3.13+, either:
+#   - run the OCR path on a Python 3.12 environment, or
+#   - set PDF_OCR_PROVIDER=api to use an OpenAI-compatible vision LLM instead.
+# The core pipeline (text-layer PDF extraction + hybrid routing) works without
+# these packages; scanned pages simply degrade to a clear placeholder.
+paddleocr>=2.7.0
+paddlepaddle>=2.6.0
+pillow>=10.0.0

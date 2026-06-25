@@ -1,0 +1,255 @@
+---
+description: Core project context and boundaries for the AI Resume Job Agent portfolio project.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# AI Resume Job Agent - Cursor Core Context
+
+This repository is a Chinese learning-oriented portfolio project. The user is studying the code in Cursor while building it, so explain changes with code-level reasoning and avoid silently making broad rewrites.
+
+## Project Goal
+
+Build a runnable, demonstrable Python Agent/RAG project for job-search and personal knowledge management:
+
+- FastAPI backend.
+- Redis for session state, long-term memory profile, task status, and vector search.
+- RAG over uploaded `.txt`, `.md`, `.docx`, and `.pdf` documents.
+- LangGraph `StateGraph` Agent workflow with tools, memory, bounded tool calls, checkpoint metadata, and a job-application HITL workflow.
+- MySQL job application database QA using deterministic SQL templates and a read-only safety layer.
+- RQ worker for asynchronous document indexing.
+- React + Vite + TypeScript frontend console.
+- MCP client integration for trusted external MCP servers.
+- Evaluation scripts, demo packaging, resume/interview documentation, and learning notes.
+
+The main business story is:
+
+```text
+job-search personal knowledge agent
+= document RAG
++ structured job application database QA
++ deterministic tools
++ memory
++ evaluation and demo assets
+```
+
+Do not reposition this project as a generic universal Agent.
+
+## Current Truth
+
+Completed and safe to claim:
+
+- FastAPI route structure and dependency injection.
+- OpenAI-compatible LLM client, including streaming and tool-call payload support.
+- OpenAI-compatible embedding client plus default fake embedding for local no-key development.
+- Docker Redis and MySQL integration.
+- Redis vector index and document chunk storage using HASH + FLOAT32 embedding bytes.
+- `.txt`, `.md`, `.docx`, and `.pdf` loaders; PDF uses text-layer extraction first and OCR fallback for scanned pages.
+- Collection isolation via Redis TAG filter to avoid mixed knowledge-base retrieval pollution.
+- Optional rerank client for two-stage retrieval: vector recall top-N then rerank top-k.
+- Query rewrite before retrieval with deterministic fallback.
+- `/documents/upload`, `/documents/upload/async`, `/documents/search`, `/rag/query`.
+- LangGraph `StateGraph` Agent workflow.
+- Tools: `search_docs`, `calculator`, `create_todo`, `summarize_file`, `draft_weekly_report`, `query_database`.
+- Bounded LLM tool-call loop for safe tools, capped at 3 rounds.
+- Redis session and memory profile.
+- RQ worker for async indexing, with task status, basic failure classification, and done-task idempotency.
+- Checkpoint latest/history metadata API using local-file checkpoint.
+- React frontend console with runtime model config, async upload polling, Agent/RAG panels, SSE streaming, job-application HITL panel, MCP capabilities panel, and trace panel.
+- Multi-Agent job-application workflow: resume analyst -> JD matcher -> material writer.
+- Job-application HITL interrupt/resume flow using LangGraph `interrupt` + `Command(resume=...)`.
+- MCP client: stdio / streamable HTTP server config, tool discovery, tool calls in the normal Agent tool loop, capabilities API, and graceful default-off behavior.
+- Local JSONL trace store and `/traces` API.
+- Real Qwen3-Embedding-4B retrieval eval after Redis index rebuild: fixed 20-question retrieval eval reached `hit_rate=1.0`.
+- Local OpenAI-compatible LLM reverse proxy passed chat, streaming, tool-call, Agent tool-loop, and Multi-Agent smoke checks.
+- Real 20-question RAG answer eval passed with `overall_pass_rate=1.0`, `citation_match_rate=1.0`, and zero errors using the local configured model.
+- Cost report generation from answer eval usage.
+
+Important current boundaries:
+
+- MySQL QA is deterministic SQL template based, not LLM free Text-to-SQL.
+- RQ worker is a first production-like step, but there is no RQ-native retry backoff, dead-letter queue, dashboard, or scheduler yet.
+- local-file checkpoint for the normal Agent is local demo/debugging, not an official Redis/Postgres production checkpointer.
+- The generic `/agent/run` workflow does not have a general-purpose resume API. The job-application workflow does have a specific HITL review/resume path.
+- MCP integration is default-off, trusts configured local servers, and does not yet use a persistent session pool.
+- No automatic resume submission. Future job-application assistance must require human confirmation and must not store passwords, bypass captchas, or spam applications.
+- Docker Compose config exists, but full image build may be blocked by Docker Hub network.
+
+## Module Map
+
+Use this mental model when explaining or editing code:
+
+```text
+app/main.py       FastAPI app assembly
+app/core/         config and request logging
+app/api/          HTTP routes and dependencies
+app/models/       Pydantic API/internal data models; not ORM models
+app/services/     LLM, embedding, Redis, MySQL, RQ, rerank, MCP, OCR, trace adapters
+app/rag/          loader, chunker, indexer, retriever, answerer
+app/agent/        LangGraph state, workflow, checkpoint, multi-agent workflow
+app/tools/        deterministic tools, tool schemas, ToolNode executor
+app/memory/       session history and long-term memory profile
+app/workers/      RQ document indexing worker
+app/evaluation/   retrieval and answer eval logic
+scripts/          smoke/eval/demo/embedding switch scripts
+frontend/         React demo console
+docs/             architecture, learning, interview, demo docs
+```
+
+## Core Runtime Flows
+
+### Synchronous Document Indexing
+
+```text
+POST /api/v1/documents/upload
+-> load_uploaded_document()
+-> chunk_document()
+-> index_document_chunks()
+-> embedding_client.embed_texts()
+-> redis_store.save_document_chunk()
+```
+
+### Async Document Indexing
+
+```text
+POST /api/v1/documents/upload/async
+-> create_document_index_task()
+-> redis_store.save_index_task(pending)
+-> RQDocumentIndexQueue.enqueue_document_index_task()
+-> worker run_document_index_task()
+-> loader/chunker/indexer
+-> redis_store.save_index_task(done/failed)
+```
+
+### Retrieval
+
+```text
+POST /api/v1/documents/search
+-> retrieve_document_chunks()
+-> optional query_rewriter.rewrite()
+-> embedding_client.embed_text()
+-> redis_store.search_document_chunks()
+-> optional rerank_client.rerank()
+```
+
+Redis vector distance is distance, not a "higher is better" score. Smaller distance usually means semantically closer.
+
+### RAG Answering
+
+```text
+POST /api/v1/rag/query
+-> answer_rag_query()
+-> retrieve_document_chunks()
+-> to_rag_sources()
+-> build_rag_messages()
+-> llm_client.chat()
+-> RagQueryResponse(answer, sources)
+```
+
+If no sources are retrieved, the system returns a no-context answer and does not call the LLM.
+
+### Agent Run
+
+```text
+POST /api/v1/agent/run
+-> run_agent_workflow()
+-> load_memory
+-> understand_intent
+-> decide_retrieval
+-> call_tools or skip_tools
+-> generate_answer
+-> save_trace
+-> AgentRunResponse(answer, intent, steps, sources, checkpoint)
+```
+
+Intent routing is mostly deterministic:
+
+- arithmetic -> `calculator`
+- todo -> `create_todo`
+- weekly report -> `draft_weekly_report`
+- file summary -> `summarize_file`
+- explicit memory update -> `memory_profile`
+- job application data question -> `query_database`
+- knowledge question -> RAG/search docs
+- general chat -> LLM, optionally with bounded tool calls
+
+### Job-Application HITL Flow
+
+```text
+POST /api/v1/agent/job-application/review
+-> resume_analyst
+-> jd_matcher
+-> human_review interrupt
+
+POST /api/v1/agent/job-application/resume
+-> Command(resume=decision)
+-> material_writer
+-> JobApplicationReviewResponse(completed)
+```
+
+This is a specific human-in-the-loop workflow for job-application material generation. It is not the same as a production-grade generic resume API for `/agent/run`.
+
+## Testing And Verification
+
+Preferred targeted tests:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\test_evaluation_answer.py tests\test_evaluation_retrieval.py -q
+.\.venv\Scripts\python.exe -m pytest tests\test_agent_api.py tests\test_agent_workflow_graph.py -q
+.\.venv\Scripts\python.exe -m pytest tests\test_documents_api.py tests\test_document_processing.py -q
+.\.venv\Scripts\python.exe -m pytest tests\test_mcp_client.py tests\test_mcp_api.py tests\test_multi_agent.py -q
+```
+
+Eval commands:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\evaluate_retrieval.py --top-k 3 --timeout-seconds 30
+.\.venv\Scripts\python.exe scripts\evaluate_rag_answers.py --top-k 3 --timeout-seconds 30 --offset 0 --limit 1 --max-retries 0
+.\.venv\Scripts\python.exe scripts\generate_cost_report.py
+```
+
+For real answer eval, prefer batches:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\evaluate_rag_answers.py --top-k 3 --timeout-seconds 60 --offset 0 --limit 5 --max-retries 1 --retry-delay-seconds 1 --retry-backoff-multiplier 2 --inter-request-delay-seconds 2
+```
+
+Do not treat a shell timeout as answer-quality failure until you inspect whether request timeout, retry count, batch size, and outer command timeout were compatible.
+
+## Coding Rules For This Repo
+
+- Keep changes small and aligned with existing modules.
+- Do not move business logic into `app/main.py` or route files.
+- Use `app/services/` for external systems and adapters.
+- Use `app/rag/` for document/RAG pipeline logic.
+- Use `app/agent/` for LangGraph workflow state and node orchestration.
+- Use `app/tools/` for Agent-callable capabilities.
+- Use Pydantic models in `app/models/` for API/internal data shape constraints.
+- Never write real API keys into code, docs, tests, `.env.example`, or generated reports.
+- Preserve fake embedding as the default no-key local development path.
+- When changing embedding model or dimension, require old `doc:*` chunks/index cleanup and re-upload before eval.
+- Do not expose full checkpoint state through APIs; only metadata is safe.
+- Do not expose long-term memory writes to unconstrained automatic LLM tool calls.
+- Do not execute unrestricted LLM-generated SQL. Reuse `prepare_safe_select()` and read-only DB account.
+
+## Learning-Oriented Behavior
+
+The user is learning. When explaining code:
+
+- Point to the exact file and function.
+- Explain the input, output, and why the module owns that responsibility.
+- Distinguish "already implemented" from "planned".
+- Mention the test file that protects the behavior.
+- Prefer "what to read next" over broad theory.
+
+Useful learning docs:
+
+```text
+docs/cursor_project_core_logic.md
+docs/code_walkthrough_from_zero.md
+docs/code_module_breakdown.md
+docs/interview_question_mapping.md
+docs/architecture.md
+docs/learning_log.md
+```

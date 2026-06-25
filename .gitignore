@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.pytest_tmp/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local config
+.env
+.env.*
+!.env.example
+
+# Runtime data
+data/uploads/*
+!data/uploads/.gitkeep
+data/checkpoints/
+data/traces/
+data/mcp/servers.json
+data/*.db
+data/*.sqlite
+logs/
+
+# Generated reports may contain local paths, uploaded document snippets, or real test data.
+data/demo/runs/
+data/demo/packages/
+data/demo/assets/*
+!data/demo/assets/.gitkeep
+data/eval/runs/
+
+# Internal learning/work logs are useful locally, but too noisy and privacy-sensitive for GitHub.
+task_plan.md
+progress.md
+findings.md
+docs/learning_log.md
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# Launcher / PyInstaller build artifacts
+launcher_build/
+launcher_dist/
+build/
+*.spec
+personal-agent-launcher.exe
+ai-resume-job-agent-launcher.exe
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

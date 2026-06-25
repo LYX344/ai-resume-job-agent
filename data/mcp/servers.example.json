@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "demo": {
+      "transport": "stdio",
+      "command": "python",
+      "args": ["scripts/mcp_demo_server.py"]
+    },
+    "remote_example": {
+      "enabled": false,
+      "transport": "streamable_http",
+      "url": "http://127.0.0.1:9000/mcp",
+      "headers": {}
+    },
+    "everything": {
+      "enabled": false,
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-everything"]
+    },
+    "filesystem": {
+      "enabled": false,
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    }
+  }
+}
